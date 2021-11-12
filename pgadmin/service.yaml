@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: pgadmin
+  namespace: dtest
+spec:
+  selector:
+    app: pgadmin
+    # type: ClusterIP
+  # type: NodePort  
+  ports:
+    - protocol: TCP
+      port: 80
+      # targetPort: 5051
+      # nodePort: 30200

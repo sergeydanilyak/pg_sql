@@ -1,0 +1,36 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: postgres-multidb
+  namespace: dstarbox
+data:
+  create-multiple-postgresql-databases.sh: |
+    #!/bin/bash
+
+    set -e
+    set -u
+
+    function create_user_and_database() {
+      local database=$1
+      echo "  Creating user and database '$database'"
+      psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" <<-EOSQL
+          CREATE DATABASE $database;
+          GRANT CONNECT ON DATABASE $database TO $POSTGRES_USER;
+          GRANT USAGE ON SCHEMA public TO $POSTGRES_USER;
+          GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO $POSTGRES_USER;
+          GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO $POSTGRES_USER;
+          GRANT ALL PRIVILEGES ON DATABASE $database TO $POSTGRES_USER;  
+
+    EOSQL
+    }
+
+    if [ -n "$POSTGRES_MULTIPLE_DATABASES" ]; then
+      echo "Multiple database creation requested: $POSTGRES_MULTIPLE_DATABASES"
+      for db in $(echo $POSTGRES_MULTIPLE_DATABASES | tr ',' ' '); do
+        create_user_and_database $db
+      done
+      echo "Multiple databases created"
+    fi
+    
+    psql -U "$POSTGRES_USER" -d roomsdb -c "create sequence rooms_seq start 1 increment 1"
+    psql -U "$POSTGRES_USER" -d roomsdb -c "create sequence room_accounts_seq start 1 increment 1"
